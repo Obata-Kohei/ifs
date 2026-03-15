@@ -136,37 +136,63 @@ pub fn koch_curve() -> IFS {
 }
 
 pub fn koch_snowflake() -> IFS {
-    let s = 1.0 / 3.0;
-    let h = 3.0_f64.sqrt() / 6.0;
 
-    let t1 = Affine::scale(s, s);
+    let s3 = 3.0_f64.sqrt();
 
-    let t2 = Affine::scale(s, s)
-        .combine(Affine::rotate_deg(60.0))
-        .combine(Affine::translate(1.0/3.0, 0.0));
+    IFS {
+        transforms: vec![
+            (
+                Affine::new(
+                    -1.0/6.0,  s3/6.0,  1.0/6.0,
+                    -s3/6.0, -1.0/6.0,  s3/6.0
+                ),
+                1.0
+            ),
+            (
+                Affine::new(
+                     1.0/6.0, -s3/6.0, 1.0/6.0,
+                     s3/6.0,  1.0/6.0, s3/6.0
+                ),
+                1.0
+            ),
+            (
+                Affine::new(
+                    1.0/3.0, 0.0, 1.0/3.0,
+                    0.0, 1.0/3.0, s3/3.0
+                ),
+                1.0
+            ),
+            (
+                Affine::new(
+                    1.0/6.0,  s3/6.0, 2.0/3.0,
+                   -s3/6.0,  1.0/6.0, s3/3.0
+                ),
+                1.0
+            ),
+            (
+                Affine::new(
+                    1.0/2.0, -s3/6.0, 1.0/3.0,
+                    s3/6.0,  1.0/2.0, 0.0
+                ),
+                1.0
+            ),
+            (
+                Affine::new(
+                   -1.0/3.0, 0.0, 2.0/3.0,
+                    0.0,-1.0/3.0, 0.0
+                ),
+                1.0
+            ),
+            (
+                Affine::new(
+                    1.0/3.0, 0.0, 2.0/3.0,
+                    0.0, 1.0/3.0, 0.0
+                ),
+                1.0
+            ),
 
-    let t3 = Affine::scale(s, s)
-        .combine(Affine::rotate_deg(-60.0))
-        .combine(Affine::translate(0.5, h));
-
-    let t4 = Affine::scale(s, s)
-        .combine(Affine::translate(2.0/3.0, 0.0));
-
-    let base = vec![t1, t2, t3, t4];
-
-    let r0 = Affine::id();
-    let r120 = Affine::rotate_deg(120.0);
-    let r240 = Affine::rotate_deg(240.0);
-
-    let mut transforms = Vec::new();
-
-    for r in [r0, r120, r240] {
-        for t in &base {
-            transforms.push((t.clone().combine(r), 1.0));
-        }
+        ]
     }
-
-    IFS {transforms}
 }
 
 pub fn ifs_presets(name: &str) -> Option<IFS> {
