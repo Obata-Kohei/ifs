@@ -7,8 +7,8 @@ mod tests {
 
     #[test]
     fn ifs_test() {
-        let ifs = ifs_presets("tree").unwrap();
-        let v = ifs.generate(100_000_00, 10000);
+        let ifs = ifs_presets("snowflake").unwrap();
+        let v = ifs.generate(100_000_00, 1000);
         println!("{:?}", &v[..10]);
 
         let img = render(&v, 512, 512);
