@@ -1,4 +1,5 @@
 use rand::prelude::*;
+use rand::distr::weighted::WeightedIndex;
 use image::{GrayImage, Luma};
 
 #[derive(Debug, Clone, Copy)]
@@ -26,26 +27,29 @@ impl Affine {
 }
 
 pub struct IFS {
-    pub transforms: Vec<Affine>,
+    pub transforms: Vec<(Affine, f64)>,  // (Affine変換: Affine, その変換が選ばれる確率: f64)
 }
 
 impl IFS {
     pub fn generate(&self, iterations: usize, burn_in: usize) -> Vec<Point> {
         let mut rng = rand::rng();
 
+        let weights: Vec<f64> = self.transforms.iter().map(|t| t.1).collect();
+        let dist = WeightedIndex::new(&weights).unwrap();
+
         let mut p = Point {x: 0.0, y: 0.0};
         let mut points: Vec<Point> = Vec::with_capacity(iterations);
 
         // burn in: 最初のN回は描画しない
         for _ in 0..burn_in {
-            let idx = rng.random_range(0..self.transforms.len());
-            p = self.transforms[idx].apply(p);
+            let idx = dist.sample(&mut rng);
+            p = self.transforms[idx].0.apply(p);
         }
 
         // 本生成
         for _ in 0..iterations {
-            let idx = rng.random_range(0..self.transforms.len());
-            p = self.transforms[idx].apply(p);
+            let idx = dist.sample(&mut rng);
+            p = self.transforms[idx].0.apply(p);
             points.push(p);
         }
 
@@ -61,7 +65,7 @@ pub fn render(points: &[Point], width: u32, height: u32) -> GrayImage {
 
     for p in points {
         let x = ((p.x - xmin) / (xmax - xmin) * width as f64) as u32;
-        let y = ((p.y - ymin) / (ymax - ymin) * height as f64) as u32;
+        let y = ((ymax - p.y) / (ymax - ymin) * height as f64) as u32;
 
         if x < width && y < height {
             let idx = (y * width + x) as usize;
