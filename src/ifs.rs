@@ -86,13 +86,13 @@ pub struct IFS {
 }
 
 impl IFS {
-    pub fn generate(&self, iterations: usize, burn_in: usize) -> Vec<Point> {
+    pub fn generate(&self, init_point: &Point, iterations: usize, burn_in: usize) -> Vec<Point> {
         let mut rng = rand::rng();
 
         let weights: Vec<f64> = self.transforms.iter().map(|t| t.1).collect();
         let dist = WeightedIndex::new(&weights).unwrap();
 
-        let mut p = Point {x: 0.0, y: 0.0};
+        let mut p = *init_point;
         let mut points: Vec<Point> = Vec::with_capacity(iterations);
 
         // burn in: 最初のN回は描画しない

@@ -1,5 +1,6 @@
 pub mod ifs;
 pub mod ifs_presets;
+pub mod fractaldb;
 
 #[cfg(test)]
 mod tests {
@@ -8,7 +9,7 @@ mod tests {
     #[test]
     fn ifs_test() {
         let ifs = ifs_presets("snowflake").unwrap();
-        let v = ifs.generate(100_000_00, 1000);
+        let v = ifs.generate(&Point {x: 0.0, y: 0.0}, 100_000_00, 1000);
         println!("{:?}", &v[..10]);
 
         let img = render(&v, 512, 512);
@@ -18,5 +19,10 @@ mod tests {
         } else {
             println!("\nFAIL");
         }
+    }
+
+    #[test]
+    fn db_test() {
+        
     }
 }
