@@ -1,5 +1,6 @@
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::fs;
-use image::GrayImage;
+//use image::GrayImage;
 //use rand::distr::Uniform;
 use rand::prelude::*;
 use crate::ifs::*;
@@ -107,30 +108,18 @@ fn quality_check(points: &[Point], ifs: &IFS, width: u32, height: u32) -> bool {
     true
 }
 
-fn augment(img: &GrayImage) -> Vec<GrayImage> {
-    vec![
-        img.clone(),
-        image::imageops::rotate90(img),
-        image::imageops::rotate180(img),
-        image::imageops::rotate270(img),
-        image::imageops::flip_horizontal(img),
-    ]
-}
-
-pub fn make_db(
-    n_class: usize,
-    n_instance: usize,
+pub fn exe_gacha(
+    n: usize,
     width: u32,
     height: u32,
 ) {
 
     let mut rng = rand::rng();
+    fs::create_dir_all("result").unwrap();
 
-    fs::create_dir_all("dataset").unwrap();
+    for id in 0..n {
 
-    for class_id in 0..n_class {
-
-        println!("class {}", class_id);
+        println!("id {}", id);
 
         // 良いIFSができるまで生成
         let ifs = loop {
@@ -145,30 +134,22 @@ pub fn make_db(
             }
         };
 
-        let class_dir = format!("dataset/class_{:05}", class_id);
-        fs::create_dir_all(&class_dir).unwrap();
+        //let class_dir = format!("dataset/class_{:05}", id);
+        //fs::create_dir_all(&class_dir).unwrap();
 
-        for inst_id in 0..n_instance {
+        let init = Point { x: 0.0, y: 0.0 };
 
-            let init = Point { x: 0.0, y: 0.0 };
+        let pts = ifs.generate(&init, 100000, 1000);
 
-            let pts = ifs.generate(&init, 100000, 1000);
+        let img = render(&pts, width, height);
 
-            let img = render(&pts, width, height);
+        let ts = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
 
-            let augmented: Vec<GrayImage> = augment(&img);
+        let filename = format!("result/{}_{:03}.png", ts, id);
 
-            for (k, aug) in augmented.iter().enumerate() {
-
-                let filename = format!(
-                    "{}/{}_{}.png",
-                    class_dir,
-                    inst_id,
-                    k
-                );
-
-                aug.save(filename).unwrap();
-            }
-        }
+        img.save(filename).unwrap();
     }
 }

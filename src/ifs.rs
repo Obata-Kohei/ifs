@@ -177,7 +177,7 @@ pub fn bounding_box(points: &[Point]) -> (f64, f64, f64, f64) {
 }
 
 // アスペクト比を補正した(xmin, xmax, ymin, ymax)を返す
-fn correct_aspect(
+pub fn correct_aspect(
     xmin: f64,
     xmax: f64,
     ymin: f64,

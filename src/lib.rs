@@ -1,10 +1,11 @@
 pub mod ifs;
 pub mod ifs_presets;
 pub mod fractaldb;
+pub mod gacha;
 
 #[cfg(test)]
 mod tests {
-    use crate::{fractaldb::make_db, ifs::*, ifs_presets::ifs_presets};
+    use crate::{fractaldb::make_db, gacha, ifs::*, ifs_presets::ifs_presets};
 
     #[test]
     fn ifs_test() {
@@ -23,6 +24,11 @@ mod tests {
 
     #[test]
     fn db_test() {
-        make_db(5, 10, 256, 256);
+        make_db(100, 2, 256, 256);
+    }
+
+    #[test]
+    fn gacha_test() {
+        gacha::exe_gacha(100, 128, 128);
     }
 }
