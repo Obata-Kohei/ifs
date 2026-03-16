@@ -4,7 +4,7 @@ pub mod fractaldb;
 
 #[cfg(test)]
 mod tests {
-    use crate::{ifs::*, ifs_presets::ifs_presets};
+    use crate::{fractaldb::make_db, ifs::*, ifs_presets::ifs_presets};
 
     #[test]
     fn ifs_test() {
@@ -23,6 +23,6 @@ mod tests {
 
     #[test]
     fn db_test() {
-        
+        make_db(5, 10, 256, 256);
     }
 }

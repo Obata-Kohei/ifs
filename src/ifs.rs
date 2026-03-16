@@ -152,7 +152,7 @@ pub fn render(points: &[Point], width: u32, height: u32) -> GrayImage {
 }
 
 // フラクタルの最小・最大座標を取得
-fn bounding_box(points: &[Point]) -> (f64, f64, f64, f64) {
+pub fn bounding_box(points: &[Point]) -> (f64, f64, f64, f64) {
     let mut xmin = f64::INFINITY;
     let mut xmax = f64::NEG_INFINITY;
     let mut ymin = f64::INFINITY;
