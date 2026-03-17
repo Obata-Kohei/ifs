@@ -119,7 +119,9 @@ pub fn exe_gacha(
 
     for id in 0..n {
 
-        println!("id {}", id);
+        if id % 10 == 0 {
+            println!("id {}", id);
+        }
 
         // 良いIFSができるまで生成
         let ifs = loop {
