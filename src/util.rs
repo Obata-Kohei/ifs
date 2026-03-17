@@ -1,3 +1,6 @@
+use image::{GrayImage, Luma};
+use crate::core::affine::Point;
+
 // 2x2の行列の固有値を求める[[a, b], [c, d]]
 pub fn det2x2(a: f64, b: f64, c: f64, d: f64) -> f64 {
     a * d - b * c

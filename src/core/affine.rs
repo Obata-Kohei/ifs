@@ -1,7 +1,9 @@
+use rand::prelude::*;
+
 #[derive(Debug, Clone, Copy)]
 pub struct Point {
-    x: f64,
-    y: f64,
+    pub x: f64,
+    pub y: f64,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -66,14 +68,14 @@ impl Affine {
     }
 
     // アフィン変換A, Bについて，A.combine(B)とすれば，Aを適用したのちBを適用することを意味する
-    pub fn combine(self, other: Self) -> Self {
+    pub fn then(self, next: Self) -> Self {
         Self {
-            a: other.a*self.a + other.b*self.d,
-            b: other.a*self.b + other.b*self.e,
-            c: other.a*self.c + other.b*self.f + other.c,
-            d: other.d*self.a + other.e*self.d,
-            e: other.d*self.b + other.e*self.e,
-            f: other.d*self.c + other.e*self.f + other.f,
+            a: next.a*self.a + next.b*self.d,
+            b: next.a*self.b + next.b*self.e,
+            c: next.a*self.c + next.b*self.f + next.c,
+            d: next.d*self.a + next.e*self.d,
+            e: next.d*self.b + next.e*self.e,
+            f: next.d*self.c + next.e*self.f + next.f,
         }
     }
 
@@ -83,8 +85,8 @@ impl Affine {
         let rot = rng.random_range(0.0..360.0);
         let (tx, ty) = (rng.random_range(-1.0..1.0), rng.random_range(-1.0..1.0));
         Self::scale(sx, sy)
-            .combine(Self::rotate_deg(rot))
-            .combine(Self::translate(tx, ty))
+            .then(Self::rotate_deg(rot))
+            .then(Self::translate(tx, ty))
     }
 
     // 2×2アフィン行列の最大特異値（= スペクトルノルム = Lipschitz定数）
