@@ -1,4 +1,10 @@
 #[derive(Debug, Clone, Copy)]
+pub struct Point {
+    x: f64,
+    y: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct Affine {
     pub a: f64,
     pub b: f64,
@@ -59,6 +65,7 @@ impl Affine {
         }
     }
 
+    // アフィン変換A, Bについて，A.combine(B)とすれば，Aを適用したのちBを適用することを意味する
     pub fn combine(self, other: Self) -> Self {
         Self {
             a: other.a*self.a + other.b*self.d,
@@ -68,5 +75,24 @@ impl Affine {
             e: other.d*self.b + other.e*self.e,
             f: other.d*self.c + other.e*self.f + other.f,
         }
+    }
+
+    // ランダムなアフィン変換を作る
+    pub fn random_affine(rng: &mut ThreadRng) -> Self {
+        let (sx, sy) = (rng.random_range(0.3..0.7), rng.random_range(0.3..0.7));
+        let rot = rng.random_range(0.0..360.0);
+        let (tx, ty) = (rng.random_range(-1.0..1.0), rng.random_range(-1.0..1.0));
+        Self::scale(sx, sy)
+            .combine(Self::rotate_deg(rot))
+            .combine(Self::translate(tx, ty))
+    }
+
+    // 2×2アフィン行列の最大特異値（= スペクトルノルム = Lipschitz定数）
+    fn spectral_norm(&self) -> f64 {
+        let (a, b, c, d) = (self.a, self.b, self.c, self.d);
+        let m = a*a + b*b + c*c + d*d;        // tr(AᵀA)
+        let s = (a*d - b*c).powi(2);          // det(AᵀA) = det(A)²
+        let discriminant = (m*m - 4.0*s).max(0.0);  // 数値誤差で負になる場合を防ぐ
+        ((m + discriminant.sqrt()) / 2.0).sqrt()
     }
 }

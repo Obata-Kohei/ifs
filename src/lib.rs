@@ -1,3 +1,4 @@
+/*
 pub mod ifs;
 pub mod ifs_presets;
 pub mod fractaldb;
@@ -32,3 +33,4 @@ mod tests {
         gacha::exe_gacha(100, 128, 128);
     }
 }
+*/
