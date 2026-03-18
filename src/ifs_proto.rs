@@ -69,7 +69,7 @@ impl Affine {
         }
     }
 
-    pub fn combine(self, other: Self) -> Self {
+    pub fn then(self, next: Self) -> Self {
         Self {
             a: other.a*self.a + other.b*self.d,
             b: other.a*self.b + other.b*self.e,
