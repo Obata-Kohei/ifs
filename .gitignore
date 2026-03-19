@@ -2,5 +2,6 @@
 
 /dataset
 *.png
+*.json
 
 .DS_Store
