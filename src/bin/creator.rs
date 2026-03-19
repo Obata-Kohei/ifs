@@ -1,5 +1,7 @@
 use std::{f64, fs, time::{SystemTime, UNIX_EPOCH}};
+use std::path::Path;
 use clap::Parser;
+use serde::Serialize;
 use ifs::{ifs::{IFS, Point}, util::analysis::{bounding_box, correct_aspect}};
 use ifs::util::io::*;
 
@@ -69,11 +71,12 @@ fn main() {
         fill_rate_range: (args.fill_rate_range_min, args.fill_rate_range_max),
         aspect_range: (args.aspect_range_min, args.aspect_range_max),
         maximum_avg_contractivity: args.maximum_avg_contractivity,
-        max_spectral_norm: args.max_spectral_norm,
+        maximum_spectral_norm: args.max_spectral_norm,
     };
 
     let mut rng = rand::rng();
     fs::create_dir_all(&path_name).expect("Path name should be valid.");
+    let mut records = Vec::with_capacity(n);
 
     for id in 0..n {
         if id % 10 == 0 && !silent_mode {
@@ -81,13 +84,13 @@ fn main() {
         }
 
         // いいIFSができるまで生成
-        let (ifs, qcfg) = loop {
+        let (ifs, qmetrics) = loop {
             let ifs = IFS::random_ifs(&mut rng);
             let init = Point {x: 0.0, y: 0.0};
             let pts = ifs.generate(&init, trial_iterations, burn_in);
 
-            if let Some(qcfg) = quality_check(&quality_config, &pts, &ifs, width, height) {
-                break (ifs, qcfg);
+            if let Some(qmetrics) = quality_check(&quality_config, &pts, &ifs, width, height) {
+                break (ifs, qmetrics);
             }
             println!("aaa");
         };
@@ -101,10 +104,30 @@ fn main() {
             .expect("should be valid time")
             .as_millis();
         let filename = format!("{}/{}_{:03}.png", path_name, ts, id);
-        img.save(filename).expect("An image should be saved.");
+        img.save(&filename).expect("An image should be saved.");
+
         // qcfgとifsのパラメタをjosnに保存
-        
+        records.push(Record {
+            id,
+            file: filename.clone(),
+            metrics: qmetrics,
+            transforms: serialize_ifs(&ifs),
+        });
     }
+
+    // jsonへ保存
+    let dir_name = Path::new(&path_name)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("result");
+
+    let json_path = format!("{}/{}.json", path_name, dir_name);
+    let json_str = serde_json::to_string_pretty(&records)
+        .expect("JSON serialization failed");
+
+    std::fs::write(&json_path, json_str)
+        .expect("Failed to write JSON");
+
 }
 
 #[derive(Debug, Clone)]
@@ -113,11 +136,11 @@ pub struct QualityConfig {
     pub minimum_attractor_size: (f64, f64),  // (x方向, y方向)でこれよりアトラクタの幅が小さいときは除外
     pub fill_rate_range: (f64, f64),  // fill rateがこの範囲にないものを除外
     pub aspect_range: (f64, f64),  // aspect = ヨコ/タテの値がこの範囲にない場合に除外
-    pub maximum_avg_contractivity: f64,  // 平均contractivityがこれより小さいときには除外
-    pub max_spectral_norm: f64,  // spectral normがこれより大きい場合に除外
+    pub maximum_avg_contractivity: f64,  // 平均contractivityがこれより大きいときには除外
+    pub maximum_spectral_norm: f64,  // spectral normがこれより大きい場合に除外
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct QualityMetrics {
     pub point_count: usize,
     pub attractor_size: (f64, f64),
@@ -125,6 +148,40 @@ pub struct QualityMetrics {
     pub aspect: f64,
     pub avg_contractivity: f64,
     pub max_spectral_norm: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SerializableTransform {
+    pub a: f64,
+    pub b: f64,
+    pub c: f64,
+    pub d: f64,
+    pub e: f64,
+    pub f: f64,
+    pub weight: f64,
+}
+
+// 1レコード分のデータ
+#[derive(Debug, Serialize)]
+struct Record {
+    id: usize,
+    file: String,
+    metrics: QualityMetrics,
+    transforms: Vec<SerializableTransform>,
+}
+
+fn serialize_ifs(ifs: &IFS) -> Vec<SerializableTransform> {
+    ifs.transforms.iter().map(|t| {
+        SerializableTransform {
+            a: t.affine.a,
+            b: t.affine.b,
+            c: t.affine.c,
+            d: t.affine.d,
+            e: t.affine.e,
+            f: t.affine.f,
+            weight: t.weight,
+        }
+    }).collect()
 }
 
 fn quality_check(
@@ -158,13 +215,13 @@ fn quality_check(
         }
     }
     let fill_rate = occupied.len() as f64 / (width * height) as f64;
-    if qcfg.fill_rate_range.0 < fill_rate || fill_rate < qcfg.fill_rate_range.1 {
+    if fill_rate < qcfg.fill_rate_range.0 || qcfg.fill_rate_range.1 < fill_rate {
         return None;
     }
 
     // アスペクト比が極端なものを除外
     let aspect = (xmax - xmin) / (ymax - ymin);
-    if qcfg.aspect_range.0 < aspect || aspect < qcfg.aspect_range.1 {
+    if aspect < qcfg.aspect_range.0 || qcfg.aspect_range.1 < aspect {
         return None;
     }
 
@@ -181,7 +238,7 @@ fn quality_check(
         if spec_norm > max_spectral_norm {
             max_spectral_norm = spec_norm;
         }
-        if spec_norm > qcfg.max_spectral_norm {
+        if spec_norm > qcfg.maximum_spectral_norm {
             return None;
         }
     }
