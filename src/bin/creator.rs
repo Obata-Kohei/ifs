@@ -9,9 +9,9 @@ struct Args {
     #[arg(short, long, default_value_t = 1)]
     n: usize,
 
-    #[arg(short, long, default_value_t = 128)]
+    #[arg(long, default_value_t = 128)]
     width: u32,
-    #[arg(short, long, default_value_t = 128)]
+    #[arg(long, default_value_t = 128)]
     height: u32,
 
     #[arg(short, long, default_value = "result")]
@@ -20,13 +20,13 @@ struct Args {
     #[arg(short, long, default_value_t = false)]
     silent: bool,
 
-    #[arg(short, long, default_value_t = 0.0)]
+    #[arg(long, default_value_t = 0.0)]
     initial_point_x: f64,
-    #[arg(short, long, default_value_t = 0.0)]
+    #[arg(long, default_value_t = 0.0)]
     initial_point_y: f64,
-    #[arg(short, long, default_value_t = 1000)]
+    #[arg(long, default_value_t = 1000)]
     burn_in: usize,
-    #[arg(long, default_value_t = 50000)]
+    #[arg(long, default_value_t = 20000)]
     trial_iterations: usize,
     #[arg(long, default_value_t = 100000)]
     final_iterations: usize,
@@ -45,7 +45,7 @@ struct Args {
     aspect_range_min: f64,  // aspect = ヨコ/タテの値がこの範囲にない場合に除外
     #[arg(long, default_value_t = 10.0)]
     aspect_range_max: f64,  // aspect = ヨコ/タテの値がこの範囲にない場合に除外
-    #[arg(long, default_value_t = 1.0)]
+    #[arg(long, default_value_t = 0.0)]
     maximum_avg_contractivity: f64,  // 平均contractivityがこれより小さいときには除外
     #[arg(long, default_value_t = 1.5)]
     max_spectral_norm: f64,  // spectral normがこれより大きい場合に除外
@@ -89,6 +89,7 @@ fn main() {
             if let Some(qcfg) = quality_check(&quality_config, &pts, &ifs, width, height) {
                 break (ifs, qcfg);
             }
+            println!("aaa");
         };
 
         let init = Point {x: 0.0, y: 0.0};
