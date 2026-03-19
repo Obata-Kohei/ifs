@@ -96,7 +96,7 @@ impl Affine {
     }
 
     // 2×2アフィン行列の最大特異値（= スペクトルノルム = Lipschitz定数）
-    fn spectral_norm(&self) -> f64 {
+    pub fn spectral_norm(&self) -> f64 {
         let (a, b, c, d) = (self.a, self.b, self.c, self.d);
         let m = a*a + b*b + c*c + d*d;        // tr(AᵀA)
         let s = (a*d - b*c).powi(2);          // det(AᵀA) = det(A)²
@@ -156,6 +156,19 @@ impl IFS {
         }
 
         points
+    }
+
+    /// 平均対数収縮率 E[log s_i] を返す
+    /// （負なら平均収縮的）
+    pub fn avg_contractivity(&self) -> f64 {
+        self.transforms
+            .iter()
+            .map(|t| {
+                let s = t.affine.spectral_norm();
+                let s = s.max(1e-12); // log(0)防止
+                t.weight * s.ln()
+            })
+            .sum()
     }
 
     pub fn random_ifs(rng: &mut ThreadRng) -> Self {
