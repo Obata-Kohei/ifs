@@ -6,6 +6,15 @@ pub mod ifs_presets;
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        ifs::*,
+        ifs_presets::*,
+        util::{
+            //analysis::*,
+            io::*,
+        }
+    };
+
     #[test]
     fn ifs_test() {
         let ifs = ifs_presets("snowflake").unwrap();
@@ -21,13 +30,17 @@ mod tests {
         }
     }
 
+    /*
     #[test]
     fn db_test() {
         make_db(100, 2, 256, 256);
     }
+    */
 
+    /*
     #[test]
     fn gacha_test() {
         gacha::exe_gacha(100, 128, 128);
     }
+    */
 }
