@@ -19,8 +19,8 @@ struct Args {
     #[arg(short, long, default_value = "result")]
     path: String,
 
-    #[arg(short, long, default_value_t = false)]
-    silent: bool,
+    //#[arg(short, long, default_value_t = false)]
+    //silent: bool,
 
     #[arg(long, default_value_t = 0.0)]
     initial_point_x: f64,
@@ -64,7 +64,7 @@ fn main() {
     let width = args.width;
     let height = args.height;
     let path_name = args.path;
-    let silent_mode = args.silent;
+    //let silent_mode = args.silent;
     let burn_in = args.burn_in;
     let trial_iterations = args.trial_iterations;
     let final_iterations = args.final_iterations;
@@ -84,7 +84,7 @@ fn main() {
     let mut records = Vec::with_capacity(n);
 
     for id in 0..n {
-        if id % 10 == 0 && !silent_mode {
+        if id % 10 == 0 {
             println!("id {}", id);
         }
 
@@ -314,7 +314,7 @@ fn quality_check(
     /*アスペクト比が極端なものを除外 */
     let aspect = (xmax - xmin) / (ymax - ymin);
     if aspect < qcfg.aspect_range.0 || qcfg.aspect_range.1 < aspect {
-        println!(" Bad Quality: aspect = {}", aspect);
+        println!("Bad Quality: aspect = {}", aspect);
         return None;
     }
 

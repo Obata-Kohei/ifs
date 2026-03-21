@@ -5,3 +5,7 @@
 *.json
 
 .DS_Store
+
+.venv
+
+*.exe
