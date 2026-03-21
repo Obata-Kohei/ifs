@@ -1,7 +1,7 @@
-use std::{f64, fs, time::{SystemTime, UNIX_EPOCH}};
+use std::{collections::HashMap, f64, fs, i32, time::{SystemTime, UNIX_EPOCH}};
 use std::path::Path;
 use clap::Parser;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use ifs::{ifs::{IFS, Point}, util::analysis::{bounding_box, correct_aspect}};
 use ifs::util::io::*;
 
@@ -28,9 +28,9 @@ struct Args {
     initial_point_y: f64,
     #[arg(long, default_value_t = 1000)]
     burn_in: usize,
-    #[arg(long, default_value_t = 20000)]
+    #[arg(long, default_value_t = 200000)]
     trial_iterations: usize,
-    #[arg(long, default_value_t = 100000)]
+    #[arg(long, default_value_t = 1000000)]
     final_iterations: usize,
 
     #[arg(long, default_value_t = 1000)]
@@ -39,10 +39,14 @@ struct Args {
     minimum_attractor_size_width: f64,
     #[arg(long, default_value_t = 1e-3)]
     minimum_attractor_size_height: f64,
-    #[arg(long, default_value_t = 0.2)]
+    #[arg(long, default_value_t = 0.1)]
     fill_rate_range_min: f64,
-    #[arg(long, default_value_t = 0.5)]
+    #[arg(long, default_value_t = 0.7)]
     fill_rate_range_max: f64,
+     #[arg(long, default_value_t = 0.095)]
+    normalized_entropy_range_min: f64,
+    #[arg(long, default_value_t = 0.999)]
+    normalized_entropy_range_max: f64,
     #[arg(long, default_value_t = 0.1)]
     aspect_range_min: f64,  // aspect = ヨコ/タテの値がこの範囲にない場合に除外
     #[arg(long, default_value_t = 10.0)]
@@ -69,6 +73,7 @@ fn main() {
         minimum_point_count: args.minimum_point_count,
         minimum_attractor_size: (args.minimum_attractor_size_width, args.minimum_attractor_size_height),
         fill_rate_range: (args.fill_rate_range_min, args.fill_rate_range_max),
+        normalized_entropy_range: (args.normalized_entropy_range_min, args.normalized_entropy_range_max),
         aspect_range: (args.aspect_range_min, args.aspect_range_max),
         maximum_avg_contractivity: args.maximum_avg_contractivity,
         maximum_spectral_norm: args.max_spectral_norm,
@@ -92,7 +97,7 @@ fn main() {
             if let Some(qmetrics) = quality_check(&quality_config, &pts, &ifs, width, height) {
                 break (ifs, qmetrics);
             }
-            println!("aaa");
+            println!("Bad quality IFS generated.");
         };
 
         let init = Point {x: 0.0, y: 0.0};
@@ -115,14 +120,32 @@ fn main() {
         });
     }
 
-    // jsonへ保存
     let dir_name = Path::new(&path_name)
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or("result");
+    .file_name()
+    .and_then(|s| s.to_str())
+    .unwrap_or("result");
 
     let json_path = format!("{}/{}.json", path_name, dir_name);
-    let json_str = serde_json::to_string_pretty(&records)
+
+    // 既存データを読む
+    let mut all_records: Vec<Record> = if Path::new(&json_path).exists() {
+        let data = std::fs::read_to_string(&json_path)
+            .expect("Failed to read existing JSON");
+
+        serde_json::from_str(&data)
+            .unwrap_or_else(|_| {
+                println!("Warning: JSON parse failed, starting fresh");
+                Vec::new()
+            })
+    } else {
+        Vec::new()
+    };
+
+    // 追記
+    all_records.extend(records);
+
+    // 保存（上書き）
+    let json_str = serde_json::to_string_pretty(&all_records)
         .expect("JSON serialization failed");
 
     std::fs::write(&json_path, json_str)
@@ -135,22 +158,24 @@ pub struct QualityConfig {
     pub minimum_point_count: usize,  // 点の数がこれより小さいときには除外
     pub minimum_attractor_size: (f64, f64),  // (x方向, y方向)でこれよりアトラクタの幅が小さいときは除外
     pub fill_rate_range: (f64, f64),  // fill rateがこの範囲にないものを除外
+    pub normalized_entropy_range: (f64, f64),  // 正規化エントロピーがこの範囲にない場合に除外
     pub aspect_range: (f64, f64),  // aspect = ヨコ/タテの値がこの範囲にない場合に除外
     pub maximum_avg_contractivity: f64,  // 平均contractivityがこれより大きいときには除外
     pub maximum_spectral_norm: f64,  // spectral normがこれより大きい場合に除外
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QualityMetrics {
     pub point_count: usize,
     pub attractor_size: (f64, f64),
     pub fill_rate: f64,
+    pub normalized_entropy: f64,
     pub aspect: f64,
     pub avg_contractivity: f64,
     pub max_spectral_norm: f64,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SerializableTransform {
     pub a: f64,
     pub b: f64,
@@ -162,7 +187,7 @@ pub struct SerializableTransform {
 }
 
 // 1レコード分のデータ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Record {
     id: usize,
     file: String,
@@ -191,47 +216,116 @@ fn quality_check(
     width: u32,
     height: u32,
 ) -> Option<QualityMetrics> {
-    // 点の数をはかる
+    /* 点の数をはかる */
     let point_count = points.len();
     if point_count < qcfg.minimum_point_count {
+        println!("Bad Quality: point count = {}", point_count);
         return None;
     }
 
-    // 線や点のような見た目になっているときは除外
+    /* 線や点のような見た目になっているときは除外 */
     let (xmin, xmax, ymin, ymax) = bounding_box(points);
     let attractor_size = (xmax - xmin, ymax - ymin);
     if attractor_size.0 < qcfg.minimum_attractor_size.0 || attractor_size.1 < qcfg.minimum_attractor_size.1 {
+        println!("Bad Quality: attractor_size = {}x{}", attractor_size.0, attractor_size.1);
         return None;
     }
 
-    // 非ゼロピクセルの割合チェック(fill rate)
+    /* 非ゼロピクセルの割合チェック(fill rate) */
     let (xmin2, xmax2, ymin2, ymax2) = correct_aspect(xmin, xmax, ymin, ymax, width, height);
     let mut occupied = std::collections::HashSet::new();
+
+    // ピクセル上のアトラクタの最大最小座標
+    let mut px_min = i32::MAX;
+    let mut px_max = i32::MIN;
+    let mut py_min = i32::MAX;
+    let mut py_max = i32::MIN;
+
     for p in points {
         let px = ((p.x - xmin2) / (xmax2 - xmin2) * width as f64) as i32;
         let py = ((ymax2 - p.y) / (ymax2 - ymin2) * height as f64) as i32;
+
         if px >= 0 && px < width as i32 && py >= 0 && py < height as i32 {
             occupied.insert((px, py));
+
+            if px < px_min {px_min = px;}
+            if px > px_max {px_max = px;}
+            if py < py_min {py_min = py;}
+            if py > py_max {py_max = py;}
         }
     }
-    let fill_rate = occupied.len() as f64 / (width * height) as f64;
-    if fill_rate < qcfg.fill_rate_range.0 || qcfg.fill_rate_range.1 < fill_rate {
+
+    if occupied.is_empty() {
+        println!("bad Quality: fill rate = None");
         return None;
     }
 
-    // アスペクト比が極端なものを除外
+    // bounding boxの面積
+    let bbox_width = (px_max - px_min + 1) as f64;
+    let bbox_height = (py_max - py_min + 1) as f64;
+    let bbox_area = bbox_width * bbox_height;
+
+    // fill rate計算と判定
+    let fill_rate = occupied.len() as f64 / bbox_area;
+
+    if fill_rate < qcfg.fill_rate_range.0 || qcfg.fill_rate_range.1 < fill_rate {
+        println!("Bad Quality: fill rate = {}", fill_rate);
+        return None;
+    }
+
+    /* エントロピーによる判定 */
+    let mut hist: HashMap<(i32, i32), usize> = HashMap::new();
+
+    // 各ピクセルのヒット数
+    for p in points {
+        let px = ((p.x - xmin2) / (xmax2 - xmin2) * width as f64) as i32;
+        let py = ((ymax2 - p.y) / (ymax2 - ymin2) * height as f64) as i32;
+
+        if px >= px_min && px <= px_max && py >= py_min && py <= py_max {
+            *hist.entry((px, py)).or_insert(0) += 1;
+        }
+    }
+
+    let total_hits: usize = hist.values().sum();
+
+    if total_hits == 0 {
+        println!("Bad Quality: entropy = None");
+        return None;
+    }
+
+    // エントロピー計算
+    let mut entropy = 0.0;
+    for &count in hist.values() {
+        let p = count as f64 / total_hits as f64;
+        entropy -= p * p.ln();
+    }
+    let max_entropy = (hist.len() as f64).ln();
+    let normalized_entropy = if max_entropy > 0.0 {
+        entropy / max_entropy
+    } else {
+        0.0
+    };
+
+    if normalized_entropy < qcfg.normalized_entropy_range.0 || qcfg.normalized_entropy_range.1 < normalized_entropy {
+        println!("Bad Quality: normalized entropy = {}", normalized_entropy);
+        return None;
+    }
+
+    /*アスペクト比が極端なものを除外 */
     let aspect = (xmax - xmin) / (ymax - ymin);
     if aspect < qcfg.aspect_range.0 || qcfg.aspect_range.1 < aspect {
+        println!(" Bad Quality: aspect = {}", aspect);
         return None;
     }
 
-    // IFSの変換の平均収縮性を求める
+    /* IFSの変換の平均収縮性を求める */
     let avg_contractivity = ifs.avg_contractivity();
     if avg_contractivity >= qcfg.maximum_avg_contractivity {
+        println!("Bad Quality: avg contractivity = {}", avg_contractivity);
         return None;
     }
 
-    // 各変換の個別スペクトルノルムチェック．極端に発散する変換を弾く
+    /*各変換の個別スペクトルノルムチェック．極端に発散する変換を弾く */
     let mut max_spectral_norm = f64::NEG_INFINITY;
     for tr in &ifs.transforms {
         let spec_norm = tr.affine.spectral_norm();
@@ -239,6 +333,7 @@ fn quality_check(
             max_spectral_norm = spec_norm;
         }
         if spec_norm > qcfg.maximum_spectral_norm {
+            println!("Bad Quality: spec norm = {}", spec_norm);
             return None;
         }
     }
@@ -247,6 +342,7 @@ fn quality_check(
         point_count,
         attractor_size,
         fill_rate,
+        normalized_entropy,
         aspect,
         avg_contractivity,
         max_spectral_norm,
