@@ -3,9 +3,7 @@
 /dataset
 *.png
 *.json
-
 .DS_Store
-
 .venv
-
 *.exe
+*.mp4
