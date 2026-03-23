@@ -5,12 +5,14 @@ from datetime import datetime
 import subprocess
 import cv2
 import numpy as np
+import mkbgm
 
 # CONFIG
 N_IMAGES = 100
 FPS = 60
 TITLE_TOTAL_DURATION = 3.0  # タイトルの合計時間（この時間でN枚を流す）
 MAIN_FRAME_DURATION = 1.0   # 本編1枚あたりの表示時間
+VIDEO_LENGTH = TITLE_TOTAL_DURATION + N_IMAGES * MAIN_FRAME_DURATION
 FRACTAL_SIZE = (1080, 1080)
 VIDEO_SIZE = (1080, 1920)
 
@@ -84,6 +86,23 @@ def concatenate_videos_ffmpeg(video_list, output_path):
     subprocess.run(cmd, check=True, capture_output=True)
     os.remove(list_file)
 
+def combine_video_bgm(input_mp4, input_wav, output_mp4):
+    """動画とBGMを結合する（動画はそのまま，音声を差し替え）"""
+    cmd = [
+        'ffmpeg', '-y',
+        '-i', input_mp4,
+        '-i', input_wav,
+        '-c:v', 'copy',
+        '-map', '0:v:0',
+        '-map', '1:a:0',
+        '-shortest',
+        output_mp4
+    ]
+    subprocess.run(cmd, check=True, capture_output=True)
+
+
+
+
 def main():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     now = datetime.now()
@@ -94,9 +113,11 @@ def main():
     raw_img_dir = os.path.join(work_dir, "raw")
     title_img_dir = os.path.join(work_dir, "title_imgs")
     main_img_dir = os.path.join(work_dir, "main_imgs")
-    
+
     title_mp4 = os.path.join(work_dir, "title.mp4")
     main_mp4 = os.path.join(work_dir, "main.mp4")
+    mp4_no_audio = os.path.join(work_dir, f"{ts}_noaudio.mp4")
+    final_wav = os.path.join(work_dir, f"{ts}.wav")
     final_mp4 = os.path.join(work_dir, f"{ts}.mp4")
 
     # 1. フラクタル生成
@@ -115,7 +136,15 @@ def main():
 
     # 4. 結合
     print("=== Concatenating Videos ===")
-    concatenate_videos_ffmpeg([title_mp4, main_mp4], final_mp4)
+    concatenate_videos_ffmpeg([title_mp4, main_mp4], mp4_no_audio)
+
+    # 5. BGMを作成
+    print("=== Generating BGM ===")
+    mkbgm.make_bgm(VIDEO_LENGTH, final_wav)
+
+    # 6. BGMと動画を合成
+    print("=== Combining video and bgm ===")
+    combine_video_bgm(mp4_no_audio, final_wav, final_mp4)
 
     # jsonを移動させる
     json_src = os.path.join(raw_img_dir, f"{os.path.basename(raw_img_dir)}.json") # raw_img_dirの中にある'raw.json'
@@ -126,12 +155,12 @@ def main():
     else:
         print(f"Warning: JSON file found at {json_src}")
 
-    # 5. クリーンアップ
+    # クリーンアップ
     print("Cleaning up")
     shutil.rmtree(raw_img_dir); shutil.rmtree(title_img_dir); shutil.rmtree(main_img_dir)
-    os.remove(title_mp4); os.remove(main_mp4)
+    os.remove(title_mp4); os.remove(main_mp4); os.remove(mp4_no_audio); os.remove(final_wav)
 
-    print(f"=== ALL PROCESS DONE ===\nFinal video: {final_mp4}")
+    print(f"=== ALL PROCESS DONE ===\nFinal video: {mp4_no_audio}")
 
 if __name__ == "__main__":
     main()
