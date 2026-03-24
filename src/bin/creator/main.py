@@ -106,10 +106,10 @@ def combine_video_bgm(input_mp4, input_wav, output_mp4):
 def main():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     now = datetime.now()
-    ts = now.strftime("%Y%m%d%H%M%S")
-    date_display = now.strftime("%Y-%m-%d") # タイトル用日付
+    ts = now.strftime("%Y-%m-%d")  #"%Y%m%d%H%M%S")
+    date_display = now.strftime("%Y-%m-%d") # 動画内表示タイトル用日付
     
-    work_dir = os.path.join(base_dir, ts)
+    work_dir = os.path.join(base_dir, "video", ts)
     raw_img_dir = os.path.join(work_dir, "raw")
     title_img_dir = os.path.join(work_dir, "title_imgs")
     main_img_dir = os.path.join(work_dir, "main_imgs")

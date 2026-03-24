@@ -2,7 +2,7 @@
 
 /dataset
 *.png
-*.json
+#*.json
 .DS_Store
 .venv
 *.exe
