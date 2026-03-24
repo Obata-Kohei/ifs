@@ -114,7 +114,7 @@ fn main() {
         // qcfgとifsのパラメタをjosnに保存
         records.push(Record {
             id,
-            file: filename.clone(),
+            //file: filename.clone(),
             metrics: qmetrics,
             transforms: serialize_ifs(&ifs),
         });
@@ -190,7 +190,7 @@ pub struct SerializableTransform {
 #[derive(Debug, Serialize, Deserialize)]
 struct Record {
     id: usize,
-    file: String,
+    //file: String,
     metrics: QualityMetrics,
     transforms: Vec<SerializableTransform>,
 }
