@@ -46,7 +46,10 @@ pub fn barnsley_fern() -> IFS {
 
 pub fn fractal_tree() -> IFS {
     IFS::new(vec![
-        t(Affine::scale(0.0, 0.5), 0.05),
+        t(
+            Affine::scale(0.0, 0.5),
+            0.05
+        ),
         t(
             Affine::scale(0.6, 0.6)
                 .then(Affine::rotate_deg(45.0))

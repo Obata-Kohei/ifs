@@ -131,6 +131,12 @@ impl IFS {
         Self { transforms, dist }
     }
 
+    pub fn add_transform(&mut self, tr: &Transform) {
+        self.transforms.push(tr.clone());
+        let weights: Vec<f64> = self.transforms.iter().map(|t| t.weight).collect();
+        self.dist = WeightedIndex::new(&weights).unwrap();
+    }
+
     pub fn generate(
         &self,
         init_point: &Point,
