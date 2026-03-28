@@ -111,7 +111,7 @@ fn main() {
         let filename = format!("{}/{}_{:03}.png", path_name, ts, id);
         img.save(&filename).expect("An image should be saved.");
 
-        // qcfgとifsのパラメタをjosnに保存
+        // qcfgとifsのパラメタをjsonに保存
         records.push(Record {
             id,
             //file: filename.clone(),
