@@ -85,22 +85,46 @@ pub fn dragon_curve() -> IFS {
 
 pub fn cyclosorus_fern() -> IFS {
     IFS::new(vec![
-            (Transform::new(Affine { a:0.0, b:0.0, c:0.0, d:0.0, e:0.25, f:-0.4 }, 0.02)),
-            (Transform::new(Affine { a:0.95, b:0.005, c:-0.002, d:-0.005, e:0.93, f:0.5 }, 0.84)),
-            (Transform::new(Affine { a:0.035, b:-0.2, c:-0.09, d:0.16, e:0.04, f:0.02 }, 0.07)),
-            (Transform::new(Affine { a:-0.04, b:0.2, c:0.083, d:0.16, e:0.04, f:0.12 }, 0.07)),
-        ])
+        // 茎 (Stem)
+        t(Affine::scale(0.0, 0.25).then(Affine::translate(0.0, -0.4)), 0.02),
+        // 全体の相似（少しの回転と高い維持率）
+        t(
+            Affine::scale(0.95, 0.93)
+                .then(Affine::rotate_deg(-0.3)) // 微小な回転
+                .then(Affine::translate(-0.002, 0.5)),
+            0.84,
+        ),
+        // 左の葉
+        t(
+            Affine::scale(0.2, 0.2) 
+                .then(Affine::rotate_deg(80.0))
+                .then(Affine::translate(-0.09, 0.02)),
+            0.07,
+        ),
+        // 右の葉
+        t(
+            Affine::scale(0.2, 0.2)
+                .then(Affine::rotate_deg(-80.0))
+                .then(Affine::translate(0.083, 0.12)),
+            0.07,
+        ),
+    ])
 }
 
 pub fn square_fractal() -> IFS {
-    let s = 0.5;
+    let s = 1.0 / 3.0;
+    let mut transforms = Vec::new();
 
-    IFS::new(vec![
-        t(Affine::scale(s, s), 1.0),
-        t(Affine::scale(s, s).then(Affine::translate(0.5, 0.0)), 1.0),
-        t(Affine::scale(s, s).then(Affine::translate(0.0, 0.5)), 1.0),
-        t(Affine::scale(s, s).then(Affine::translate(0.5, 0.5)), 1.0),
-    ])
+    for i in 0..3 {
+        for j in 0..3 {
+            if i == 1 && j == 1 { continue; } // 中央を抜く
+            transforms.push(t(
+                Affine::scale(s, s).then(Affine::translate(i as f64 * s, j as f64 * s)),
+                1.0
+            ));
+        }
+    }
+    IFS::new(transforms)
 }
 
 pub fn triangle_dust() -> IFS {
@@ -127,19 +151,37 @@ pub fn vicsek_fractal() -> IFS {
 }
 
 pub fn pentagon_fractal() -> IFS {
+    let s = 0.382;
     IFS::new(vec![
-            (Transform::new(Affine { a:0.382, b:0.0, c:0.309, d:0.0, e:0.382, f:0.951 }, 1.0)),
-            (Transform::new(Affine { a:0.382, b:0.0, c:-0.809, d:0.0, e:0.382, f:0.588 }, 1.0)),
-            (Transform::new(Affine { a:0.382, b:0.0, c:-0.5, d:0.0, e:0.382, f:-0.588 }, 1.0)),
-            (Transform::new(Affine { a:0.382, b:0.0, c:0.5, d:0.0, e:0.382, f:-0.588 }, 1.0)),
-            (Transform::new(Affine { a:0.382, b:0.0, c:0.809, d:0.0, e:0.382, f:0.588 }, 1.0)),
-        ])
+        // 真上 (90度)
+        t(Affine::scale(s, s).then(Affine::translate(0.0, 1.0)), 1.0),
+        // 左上 (162度) : cos(162)=-0.951, sin(162)=0.309
+        t(Affine::scale(s, s).then(Affine::translate(-0.951, 0.309)), 1.0),
+        // 左下 (234度) : cos(234)=-0.588, sin(234)=-0.809
+        t(Affine::scale(s, s).then(Affine::translate(-0.588, -0.809)), 1.0),
+        // 右下 (306度) : cos(306)=0.588,  sin(306)=-0.809
+        t(Affine::scale(s, s).then(Affine::translate(0.588, -0.809)), 1.0),
+        // 右上 (18度)  : cos(18)=0.951,   sin(18)=0.309
+        t(Affine::scale(s, s).then(Affine::translate(0.951, 0.309)), 1.0),
+    ])
 }
 
 pub fn spiral_fractal() -> IFS {
     IFS::new(vec![
-        (Transform::new(Affine { a:0.787879, b:-0.424242, c:1.758647, d:0.242424, e:0.859848, f:1.408065 }, 0.9)),
-        (Transform::new(Affine { a:-0.121212, b:0.257576, c:-6.721654, d:0.151515, e:0.053030, f:1.377236 }, 0.1)),
+        // メインの螺旋: 約 0.9倍のスケールで約 20度回転
+        t(
+            Affine::scale(0.89, 0.89)
+                .then(Affine::rotate_deg(17.0))
+                .then(Affine::translate(1.758, 1.408)),
+            0.9,
+        ),
+        // 接続・補正用
+        t(
+            Affine::scale(0.28, 0.16)
+                .then(Affine::rotate_deg(115.0))
+                .then(Affine::translate(-6.721, 1.377)),
+            0.1,
+        ),
     ])
 }
 
@@ -236,7 +278,7 @@ pub fn ifs_presets(name: &str) -> Option<IFS> {
 
         "dragon curve" | "dragon" | "Heighway dragon" | "heighway" => Some(dragon_curve()),
 
-        "cyclosorus fern" | "cyclosorus" | "fern 2" => Some(cyclosorus_fern()),
+        "cyclosorus fern" | "cyclosorus" | "fern2" => Some(cyclosorus_fern()),
 
         "square fractal" | "square" => Some(square_fractal()),
 
