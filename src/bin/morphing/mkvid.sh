@@ -6,6 +6,7 @@ fps=30
 duration_sec=5
 
 presets=("gasket" "fern" "tree" "dragon" "fern2" "square" "vicsek" "pentagon" "spiral" "snowflake")
+presets=($(printf "%s\n" "${presets[@]}" | shuf))  # シャッフル
 
 len=${#presets[@]}
 
@@ -14,7 +15,7 @@ for (( i=0; i<${len}; i++ )); do
     next=${presets[$(( (i + 1) % len ))]}
 
     echo "Making morphing ${current} and ${next}"
-    ./morphing --n $((fps * duration_sec)) --width ${width} --height ${height} --src-ifs ${current} --dst-ifs ${next} --path result
+    ./morphing.exe --n $((fps * duration_sec)) --width ${width} --height ${height} --src-ifs ${current} --dst-ifs ${next} --path result
     ffmpeg -framerate ${fps} -i result/%05d.png -c:v libx264 -pix_fmt yuv420p ${current}2${next}.mp4
 done
 
