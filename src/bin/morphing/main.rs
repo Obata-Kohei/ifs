@@ -74,37 +74,29 @@ fn lerp(a: f64, b: f64, t: f64) -> f64 {
 }
 
 fn lerp_ifs(ifs1: &IFS, ifs2: &IFS, t: f64) -> IFS {
-    let mut ifs1 = ifs1.clone();
-    let mut ifs2 = ifs2.clone();
+    let ifs1 = ifs1.clone();
+    let ifs2 = ifs2.clone();
     let n_transforms1 = ifs1.transforms.len();
     let n_transforms2 = ifs2.transforms.len();
 
     let n_transforms = n_transforms2.max(n_transforms1);
-    // ifs間のtransformsの数をそろえる
-    if n_transforms1 > n_transforms2 {
-        ifs2.add_transform(ifs1.transforms.last().unwrap_or(&Transform { affine: Affine::id(), weight: 0.0 }));
-    } else {
-        ifs1.add_transform(ifs2.transforms.last().unwrap_or(&Transform { affine: Affine::id(), weight: 0.0 }));
-    }
 
     // 各パラメタを補間する
     let mut transforms: Vec<Transform> = Vec::new();
 
     for i in 0..n_transforms {
-        if let Some(tr1) = ifs1.transforms.get(i) {
-            if let Some(tr2) = ifs2.transforms.get(i) {
-                let af = Affine::new(
-                    lerp(tr1.affine.a, tr2.affine.a, t),
-                    lerp(tr1.affine.b, tr2.affine.b, t),
-                    lerp(tr1.affine.c, tr2.affine.c, t),
-                    lerp(tr1.affine.d, tr2.affine.d, t),
-                    lerp(tr1.affine.e, tr2.affine.e, t),
-                    lerp(tr1.affine.f, tr2.affine.f, t),
-                );
-                let w = lerp(tr1.weight, tr2.weight, t);
-                transforms.push(Transform::new(af, w));
-            }
-        }
+        let tr1 = ifs1.transforms.get(i).cloned().unwrap_or(Transform { affine: Affine::id(), weight: 0.0 });
+        let tr2 = ifs2.transforms.get(i).cloned().unwrap_or(Transform { affine: Affine::id(), weight: 0.0 });
+        let af = Affine::new(
+            lerp(tr1.affine.a, tr2.affine.a, t),
+            lerp(tr1.affine.b, tr2.affine.b, t),
+            lerp(tr1.affine.c, tr2.affine.c, t),
+            lerp(tr1.affine.d, tr2.affine.d, t),
+            lerp(tr1.affine.e, tr2.affine.e, t),
+            lerp(tr1.affine.f, tr2.affine.f, t),
+        );
+        let w = lerp(tr1.weight, tr2.weight, t);
+        transforms.push(Transform::new(af, w));
     }
 
     let ret = IFS::new(transforms);
