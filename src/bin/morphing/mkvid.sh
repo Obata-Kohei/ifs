@@ -1,7 +1,7 @@
 #!/bin/sh
 
-width=128
-height=128
+width=$((9*16))
+height=$((16*16))
 fps=30
 duration_sec=5
 
@@ -34,11 +34,11 @@ done
 
 # 2. リストを元に結合
 echo "Concatenating all videos..."
-ffmpeg -f concat -safe 0 -i "$list_file" -c copy final_output.mp4
+ffmpeg -f concat -safe 0 -i "$list_file" -c copy output.mp4
 
 # 3. 使い終わったリストファイルを削除
 rm "$list_file"
 rm *2*.mp4
 rm -rf ./result
 
-echo "Done! Output: final_output.mp4"
+echo "Done! Output: output.mp4"
