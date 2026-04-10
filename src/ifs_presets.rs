@@ -270,6 +270,8 @@ pub fn koch_snowflake() -> IFS {
 
 pub fn ifs_presets(name: &str) -> Option<IFS> {
     match name {
+        "random" => Some(IFS::random_ifs(&mut rand::rng())),
+
         "Sierpinski gasket" | "Sierpinski" | "sierpinski" | "gasket" | "triangle" | "tri" => Some(sierpinski_gasket()),
 
         "Barnsley fern" | "Barnsley" | "barnsley" | "fern" => Some(barnsley_fern()),

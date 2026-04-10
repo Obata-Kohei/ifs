@@ -5,7 +5,7 @@ height=$((16*16))
 fps=30
 duration_sec=5
 
-presets=("gasket" "fern" "tree" "dragon" "fern2" "square" "vicsek" "pentagon" "spiral" "snowflake")
+presets=("gasket" "fern" "random" "random")
 presets=($(printf "%s\n" "${presets[@]}" | shuf))  # シャッフル
 
 len=${#presets[@]}
